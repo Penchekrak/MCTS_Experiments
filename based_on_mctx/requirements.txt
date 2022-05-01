@@ -1,0 +1,11 @@
+mctx
+jax
+numpy
+scipy
+wandb
+graphviz
+gym
+gym-minigrid
+flax
+optax
+rlax

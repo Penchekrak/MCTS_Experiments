@@ -69,13 +69,13 @@ def _run_demo(rng_key):
     recurrent_fn = _make_bandit_recurrent_fn(qvalues)
 
     # Running the search.
-    policy_output = mctx.gumbel_muzero_policy(
+    policy_output = mctx.muzero_policy(
         params=(),
         rng_key=search_rng,
         root=root,
         recurrent_fn=recurrent_fn,
         num_simulations=FLAGS.num_simulations,
-        max_num_considered_actions=FLAGS.max_num_considered_actions,
+        # max_num_considered_actions=FLAGS.max_num_considered_actions,
         qtransform=functools.partial(
             mctx.qtransform_completed_by_mix_value,
             use_mixed_value=use_mixed_value),
@@ -86,8 +86,8 @@ def _run_demo(rng_key):
 
     # We will compare the selected action to the action selected by the
     # prior policy, while using the same Gumbel random numbers.
-    gumbel = policy_output.search_tree.extra_data.root_gumbel
-    prior_policy_action = jnp.argmax(gumbel + prior_logits, axis=-1)
+    # gumbel = policy_output.search_tree.extra_data.root
+    prior_policy_action = jnp.argmax(prior_logits, axis=-1)
     prior_policy_action_value = qvalues[jnp.arange(batch_size),
                                         prior_policy_action]
 

@@ -1,6 +1,0 @@
-mctx
-jax
-numpy
-scipy
-wandb
-graphviz

@@ -160,6 +160,7 @@ class Agent(object):
         value_logits = jnp.zeros((num_nodes,) + root.value_logits.shape)
         value = jnp.zeros((num_nodes,) + root.value.shape)
         action_value = jnp.zeros((num_nodes, num_actions) + root.value.shape)
+        action_std_value = jnp.ones_like(action_value)
         depth = jnp.zeros((num_nodes,), dtype=jnp.int32)
         parent = jnp.zeros((num_nodes,), dtype=jnp.int32)
         parent_action = jnp.zeros((num_nodes,), dtype=jnp.int32)
@@ -189,6 +190,7 @@ class Agent(object):
             value_logits=value_logits,
             value=value,
             action_value=action_value,
+            action_std_value=action_std_value,
             depth=depth,
             parent=parent,
             parent_action=parent_action,
@@ -211,6 +213,7 @@ class Agent(object):
             # Note that these statistics are hard to maintain incrementally because they are non-monotonic.
             is_valid = jnp.clip(tree.visit_count, 0, 1)
             action_value = tree.action_value
+            action_std_value = tree.action_std_value
             q_min = jnp.min(jnp.where(is_valid, action_value,
                             jnp.full_like(action_value, jnp.inf)))
             q_max = jnp.max(jnp.where(is_valid, action_value,
@@ -225,7 +228,7 @@ class Agent(object):
                 q = action_value[t]
                 q = jax.lax.select(
                     tree.visit_count[t] > 0, q, jnp.full_like(q, q_mean))
-                w = jnp.ones_like(action_value[t])
+                w = action_std_value[t]
                 w = jax.lax.select(
                     tree.visit_count[t] > 0, w, jnp.full_like(w, w_mean))
                 sigma = jnp.sqrt(w - q ** 2)
@@ -272,7 +275,7 @@ class Agent(object):
                 is_valid_child = jnp.clip(tree.visit_count[p], 0, 1)
                 q_mean = (
                     q_mean + jnp.sum(tree.action_value[p] * is_valid_child)) / (jnp.sum(is_valid_child) + 1)
-                w_mean = (w_mean + (jnp.sum(tree.action_value[p] * is_valid_child) ** 2)) / (
+                w_mean = (w_mean + jnp.sum(tree.action_std_value[p] * is_valid_child)) / (
                     jnp.sum(is_valid_child) + 1)
                 rng_key, sub_key = jax.random.split(rng_key)
                 a = _select_action(sub_key, p, q_mean, w_mean)
@@ -282,7 +285,7 @@ class Agent(object):
             q_mean = jnp.sum(
                 tree.action_value[0] * is_valid_child) / jnp.maximum(jnp.sum(is_valid_child), 1)
             w_mean = jnp.sum(
-                (tree.action_value[0] ** 2) * is_valid_child) / jnp.maximum(jnp.sum(is_valid_child), 1)
+                tree.action_std_value[0] * is_valid_child) / jnp.maximum(jnp.sum(is_valid_child), 1)
             rng_key, sub_key = jax.random.split(rng_key)
             a = _select_action(sub_key, 0, q_mean, w_mean)
             _, p, a, _, _ = jax.lax.while_loop(
@@ -320,9 +323,12 @@ class Agent(object):
                 new_n = tree.visit_count[p, a] + 1
                 new_q = (tree.action_value[p, a] *
                          tree.visit_count[p, a] + g) / new_n
+                new_w = (tree.action_std_value[p, a] *
+                         tree.visit_count[p, a] + g ** 2) / new_n
                 tree = tree._replace(
                     visit_count=tree.visit_count.at[p, a].add(1),
                     action_value=tree.action_value.at[p, a].set(new_q),
+                    action_std_value=tree.action_value.at[p, a].set(new_w)
                 )
                 return tree, p, g
 

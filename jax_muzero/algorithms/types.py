@@ -38,6 +38,7 @@ Tree = collections.namedtuple(
         'value_logits',
         'value',
         'action_value',
+        'action_std_value'
         'depth',
         'parent',
         'parent_action',

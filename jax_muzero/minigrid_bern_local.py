@@ -1,5 +1,6 @@
 import os
-
+import faulthandler
+faulthandler.enable()
 
 from ray import tune
 
@@ -62,6 +63,7 @@ if __name__ == '__main__':
             'num_updates': 120_000,
         },
         resources_per_trial={
-            'cpu': 1,
+            'cpu': 2,
+            'gpu': 1
         },
     )

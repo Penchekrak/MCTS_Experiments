@@ -81,7 +81,7 @@ def generate_update_fn(agent: agents.Agent, opt_update, unroll_steps: int, td_st
         policy_target = jax.lax.stop_gradient(policy_target)
 
         # tree search statistics
-        average_std_of_actions = jnp.mean(target_trees.action_std_value - target_trees.action_value ** 2)
+        average_std_of_actions =  jnp.mean(target_trees.action_std_value - target_trees.action_value ** 2) * jnp.clip(target_trees.visit_count, 0, 1)
         # 2.3 Value
         discounts = (1. - trajectory.last[1:]) * discount_factor
 

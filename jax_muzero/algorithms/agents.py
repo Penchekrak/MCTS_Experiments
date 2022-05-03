@@ -160,7 +160,7 @@ class Agent(object):
         value_logits = jnp.zeros((num_nodes,) + root.value_logits.shape)
         value = jnp.zeros((num_nodes,) + root.value.shape)
         action_value = jnp.zeros((num_nodes, num_actions) + root.value.shape)
-        action_std_value = jnp.ones_like(action_value)
+        action_std_value = jnp.zeros_like(action_value)
         depth = jnp.zeros((num_nodes,), dtype=jnp.int32)
         parent = jnp.zeros((num_nodes,), dtype=jnp.int32)
         parent_action = jnp.zeros((num_nodes,), dtype=jnp.int32)
@@ -328,7 +328,7 @@ class Agent(object):
                 tree = tree._replace(
                     visit_count=tree.visit_count.at[p, a].add(1),
                     action_value=tree.action_value.at[p, a].set(new_q),
-                    action_std_value=tree.action_value.at[p, a].set(new_w)
+                    action_std_value=tree.action_std_value.at[p, a].set(new_w)
                 )
                 return tree, p, g
 

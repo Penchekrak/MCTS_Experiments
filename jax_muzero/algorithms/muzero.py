@@ -160,6 +160,7 @@ def generate_update_fn(agent: agents.Agent, opt_update, unroll_steps: int, td_st
             'value_loss': jnp.mean(log['value_loss']),
             'policy_loss': jnp.mean(log['policy_loss']),
             'total_loss': jnp.mean(log['total_loss']),
+            'average_std_in_tree': jnp.mean(log['average_std_in_tree'])
         })
         log.pop('reward_target')
         log.pop('reward_prediction')

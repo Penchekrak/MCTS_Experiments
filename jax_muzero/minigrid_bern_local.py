@@ -52,7 +52,7 @@ if __name__ == '__main__':
         'mcts_c3': 1.2,
         'mode': "bern",
     }
-    wandb.init(project="MuZero", entity="penchekrak", sync_tensorboard=True, config=config)
+    # wandb.init(project="MuZero", entity="penchekrak", sync_tensorboard=True, config=config)
     log_filename = os.path.basename(__file__).split('.')[0] + "_bern"
     analysis = tune.run(
         Experiment_Minigrid,
@@ -62,6 +62,6 @@ if __name__ == '__main__':
             'num_updates': 120_000,
         },
         resources_per_trial={
-            'gpu': 1,
+            'cpu': 1,
         },
     )

@@ -13,3 +13,4 @@ python-snappy
 wandb
 gym_minigrid
 tensorboard
+ffmpeg

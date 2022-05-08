@@ -52,7 +52,9 @@ if __name__ == '__main__':
         'mcts_c3': 1.2,
         'mode': "prior",
     }
-    wandb.init(project="MuZero", entity="green-of-tim", sync_tensorboard=True)
+    wandb.init(project="MuZero", entity="skoltech_ml2022_project_synced_target_nets",
+               sync_tensorboard=True, config=config)
+    # wandb.init(project="MuZero", entity="green-of-tim", sync_tensorboard=True)
     log_filename = os.path.basename(__file__).split('.')[0] + "_prior"
     analysis = tune.run(
         Experiment_Minigrid,

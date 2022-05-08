@@ -1,30 +1,34 @@
 """MuZero: a MCTS agent that plans with a learned value-equivalent model."""
-from vec_env import DummyVecEnv, Monitor, ShmemVecEnv
 import logging
 import time
+from pathlib import Path
 
 import chex
+import cv2
 import distrax
+import gym
+import gym_minigrid
 import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
 import optax
-from ray import tune
 import rlax
+import wandb
+from ray import tune
+from ray.tune.integration.wandb import WandbTrainableMixin
 
+import vec_env
 from algorithms import actors
 from algorithms import agents
 from algorithms import replay_buffers as replay
 from algorithms import utils
 from algorithms.types import ActorOutput, Params
 from environments import atari
-import vec_env
+from vec_env import DummyVecEnv, Monitor, ShmemVecEnv
 
-import gym
-import gym_minigrid
-import cv2
 cv2.ocl.setUseOpenCL(False)
+from gym.wrappers import RecordVideo
 
 
 def generate_update_fn(agent: agents.Agent, opt_update, unroll_steps: int, td_steps: int, discount_factor: float,
@@ -81,7 +85,8 @@ def generate_update_fn(agent: agents.Agent, opt_update, unroll_steps: int, td_st
         policy_target = jax.lax.stop_gradient(policy_target)
 
         # tree search statistics
-        average_std_of_actions =  jnp.mean(target_trees.action_std_value - target_trees.action_value ** 2) * jnp.clip(target_trees.visit_count, 0, 1)
+        visit_counts = jnp.clip(target_trees.visit_count, 0, 1)
+        average_std_of_actions = jnp.sum((target_trees.action_std_value - target_trees.action_value ** 2) * visit_counts) / jnp.sum(visit_counts)
         # 2.3 Value
         discounts = (1. - trajectory.last[1:]) * discount_factor
 
@@ -385,7 +390,9 @@ class Experiment(tune.Trainable):
         self._evaluate_envs.close()
 
 
-class Experiment_Minigrid(tune.Trainable):
+
+class Experiment_Minigrid(WandbTrainableMixin, tune.Trainable):
+
     def setup(self, config):
         self._config = config
         platform = jax.lib.xla_bridge.get_backend().platform
@@ -394,6 +401,7 @@ class Experiment_Minigrid(tune.Trainable):
 
         seed = config['seed']
         env_id = config['env_id']
+
         # self._envs = atari.make_vec_env(
         #     env_id,
         #     num_env=config['num_envs'],
@@ -401,8 +409,9 @@ class Experiment_Minigrid(tune.Trainable):
         #     env_kwargs=config['env_kwargs'],
         # )
 
-        def make_vec_minigrid(env_id, num_env, seed, env_kwargs=None, wrapper_kwargs=None, start_index=0, force_dummy=False):
-            wrapper_kwargs = wrapper_kwargs or {}
+        def make_vec_minigrid(env_id, num_env, seed, env_kwargs=None, start_index=0, force_dummy=False,
+                              save_video=False, video_wrapper_kwargs=None):
+            video_wrapper_kwargs = video_wrapper_kwargs or {}
             seed = seed * 10000
 
             def make_thunk(rank):
@@ -411,7 +420,8 @@ class Experiment_Minigrid(tune.Trainable):
                     subrank=rank,
                     seed=seed,
                     env_kwargs=env_kwargs,
-                    wrapper_kwargs=wrapper_kwargs,
+                    video_wrapper_kwargs=video_wrapper_kwargs,
+                    save_video=save_video
                 )
 
             if not force_dummy and num_env > 1:
@@ -419,14 +429,16 @@ class Experiment_Minigrid(tune.Trainable):
             else:
                 return DummyVecEnv([make_thunk(i + start_index) for i in range(num_env)])
 
-        def make_minigrid_env(env_id, subrank=0, seed=None, env_kwargs=None, wrapper_kwargs=None):
+        def make_minigrid_env(env_id, subrank=0, seed=None, env_kwargs=None, video_wrapper_kwargs=None,
+                              save_video=False):
             del env_kwargs
-            wrapper_kwargs = wrapper_kwargs or {}
+            video_wrapper_kwargs = video_wrapper_kwargs or {}
             env = gym.make(env_id)
             env = gym_minigrid.wrappers.ImgObsWrapper(env)
             env.seed(seed + subrank if seed is not None else None)
+            if save_video:
+                env = RecordVideo(env, **video_wrapper_kwargs)
             env = Monitor(env, allow_early_resets=True)
-            # env = wrap_deepmind(env, **wrapper_kwargs)
             return env
 
         # def wrap_deepmind(env, episode_life=False, clip_rewards=True):
@@ -452,7 +464,8 @@ class Experiment_Minigrid(tune.Trainable):
             num_env=config['evaluate_episodes'],
             seed=config['seed'],
             env_kwargs=config['env_kwargs'],
-            wrapper_kwargs={'episode_life': False},
+            video_wrapper_kwargs=dict(video_folder=config['video_folder'], name_prefix='minigrid_video'),
+            save_video=config['save_video']
         )
         self._evaluate_envs = vec_env.VecFrameStack(self._evaluate_envs, 4)
         self._agent = agents.Agent(
@@ -625,6 +638,16 @@ class Experiment_Minigrid(tune.Trainable):
             'episode_return': np.mean([epinfo['r'] for epinfo in epinfos]),
             'episode_length': np.mean([epinfo['l'] for epinfo in epinfos]),
         })
+
+        replays = []
+        if self._config['save_video']:
+            video_paths = [s for s in Path(self._config['video_folder']).iterdir() if s.suffix == '.mp4']
+            for path in video_paths:
+                replays.append(wandb.Video(str(path)))
+            log.update({'replays': replays})
+            wandb.log(log, commit=True)
+            # for s in Path(self._config['video_folder']).iterdir():
+            #     s.unlink()
         return log
 
     def cleanup(self):

@@ -1,12 +1,9 @@
 import os
 
-
+import wandb
 from ray import tune
 
-
-from algorithms.muzero import Experiment, Experiment_Minigrid
-
-import wandb
+from algorithms.muzero import Experiment_Minigrid
 
 if __name__ == '__main__':
     config = {
@@ -48,11 +45,13 @@ if __name__ == '__main__':
         'evaluate_episodes': 32,
         'log_interval': 100,
         'total_frames': 100_000,
-        
+
         'mcts_c3': 1.2,
         'mode': "bern",
+        'save_video': True,
+        'video_folder': '/tmp/minigrid_video',
+        'wandb': {'project': 'MuZero', 'entity': 'skoltech_ml2022_project_synced_target_nets', 'sync_tensorboard': True}
     }
-    wandb.init(project="MuZero", entity="penchekrak", sync_tensorboard=True, config=config)
     log_filename = os.path.basename(__file__).split('.')[0] + "_bern"
     analysis = tune.run(
         Experiment_Minigrid,

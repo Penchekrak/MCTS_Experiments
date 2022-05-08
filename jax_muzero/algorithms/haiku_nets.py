@@ -9,6 +9,7 @@ import jax.numpy as jnp
 
 class ResidualConvBlockV1(hk.Module):
     """A v1 residual convolutional block."""
+
     def __init__(self, channels: int, stride: int, use_projection: bool, name='residual_conv_block_v1'):
         super(ResidualConvBlockV1, self).__init__(name=name)
         self._use_projection = use_projection
@@ -42,6 +43,7 @@ class ResidualConvBlockV1(hk.Module):
 
 class ResidualConvBlockV2(hk.Module):
     """A v2 residual convolutional block."""
+
     def __init__(self, channels, stride: int, use_projection: bool, name='residual_conv_block_v2'):
         super(ResidualConvBlockV2, self).__init__(name=name)
         self._use_projection = use_projection
@@ -71,6 +73,7 @@ class ResidualConvBlockV2(hk.Module):
 
 class EZStateEncoder(hk.Module):
     """EfficientZero encoder architecture."""
+
     def __init__(self, channels, use_v2, name='ez_state_encoder'):
         super(EZStateEncoder, self).__init__(name=name)
         self._channels = channels
@@ -168,6 +171,7 @@ class EZPrediction(hk.Module):
 
 class EZTransition(hk.Module):
     """EfficientZero transition architecture."""
+
     def __init__(self, use_v2, name='ez_transition'):
         super(EZTransition, self).__init__(name=name)
         self._use_v2 = use_v2

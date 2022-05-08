@@ -1,7 +1,6 @@
 """Customized data structures."""
 import collections
 
-
 ActorOutput = collections.namedtuple('ActorOutput', [
     'action_tm1',
     'reward',
@@ -9,7 +8,6 @@ ActorOutput = collections.namedtuple('ActorOutput', [
     'first',
     'last',
 ])
-
 
 AgentOutput = collections.namedtuple('AgentOutput', [
     'state',
@@ -20,13 +18,11 @@ AgentOutput = collections.namedtuple('AgentOutput', [
     'reward',
 ])
 
-
 Params = collections.namedtuple('Params', [
     'encoder',
     'prediction',
     'transition',
 ])
-
 
 Tree = collections.namedtuple(
     'Tree', [

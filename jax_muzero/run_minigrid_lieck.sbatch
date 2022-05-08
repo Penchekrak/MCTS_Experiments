@@ -12,4 +12,6 @@ export CUDA_VISIBLE_DEVICES=0
 
 #python main.py --env BreakoutNoFrameskip-v4 --case atari --opr train --force --num_gpus 2 --num_cpus 32 --cpu_actor 8 --gpu_actor 8 --p_mcts_num 1 --seed 42 --use_priority --use_max_priority --amp_type 'torch_amp' --info 'EfficientZero-V1' --save_video
 #python3 main.py --env BreakoutNoFrameskip-v4 --case atari --opr train --force --num_gpus 2 --num_cpus 32 --cpu_actor 8 --gpu_actor 8 --p_mcts_num 1 --seed 42 --use_priority --use_max_priority --amp_type 'torch_amp' --info 'EfficientZero-V1' --save_video
-python minigrid_lieck.py
+module load Python/Anaconda_v11.2021
+source activate mcts
+python minigrid_bern.py

@@ -77,7 +77,7 @@ class Agent(object):
         act_prob = self.act_prob(tree.visit_count[0], temperature)
         sampled_action = rlax.categorical_sample(sample_key, act_prob)
         greedy_actions = (
-            tree.visit_count[0] == tree.visit_count[0].max()).astype(jnp.float32)
+                tree.visit_count[0] == tree.visit_count[0].max()).astype(jnp.float32)
         greedy_prob = greedy_actions / greedy_actions.sum()
         greedy_action = rlax.categorical_sample(greedy_key, greedy_prob)
         # Choose the greedy action during evaluation.
@@ -126,6 +126,7 @@ class Agent(object):
 
     def model_unroll(self, params: Params, state: chex.Array, action_sequence: chex.Array):
         """The input `state` and `action` are assumed to be [S] and [T]."""
+
         def fn(state: chex.Array, action: chex.Array):
             one_hot_action = hk.one_hot(action, self._action_space.n)
             next_state = self._transit_fn.apply(
@@ -215,9 +216,9 @@ class Agent(object):
             action_value = tree.action_value
             action_std_value = tree.action_std_value
             q_min = jnp.min(jnp.where(is_valid, action_value,
-                            jnp.full_like(action_value, jnp.inf)))
+                                      jnp.full_like(action_value, jnp.inf)))
             q_max = jnp.max(jnp.where(is_valid, action_value,
-                            jnp.full_like(action_value, -jnp.inf)))
+                                      jnp.full_like(action_value, -jnp.inf)))
             q_min = jax.lax.select(is_valid.sum() == 0, 0., q_min)
             q_max = jax.lax.select(is_valid.sum() == 0, 0., q_max)
 
@@ -245,22 +246,22 @@ class Agent(object):
                 # See Eq. (2) in https://www.nature.com/articles/s41586-020-03051-4.pdf.
                 if mode == "base":
                     score = q + p * \
-                        jnp.sqrt(n.sum()) / (1 + n) * \
-                        (c1 + jnp.log((n.sum() + c2 + 1) / c2))
-                elif mode == "lieck":
+                            jnp.sqrt(n.sum()) / (1 + n) * \
+                            (c1 + jnp.log((n.sum() + c2 + 1) / c2))
+                elif mode == "bern":
                     L = jnp.log(n.sum() + c3 + 1)
                     score = q + c1 * sigma * \
-                        jnp.sqrt(L) / jnp.sqrt(1 + n) + c2 * L / (1 + n)
+                            jnp.sqrt(L) / jnp.sqrt(1 + n) + c2 * L / (1 + n)
                 elif mode == "prior":
                     L = jnp.log(n.sum() + c3 + 1)
                     score = q + p * (c1 * sigma * jnp.sqrt(L) /
                                      jnp.sqrt(1 + n) + c2 * L / (1 + n))
-                # elif mode == "bern":
+                # elif mode == "lieck":
                 else:
                     L = jnp.log(n.sum() + c3 + 1)
                     score = q + c1 * sigma * \
-                        jnp.sqrt(L) / jnp.sqrt(1 + n) + \
-                        c2 * q_max * L / (1 + n)
+                            jnp.sqrt(L) / jnp.sqrt(1 + n) + \
+                            c2 * q_max * L / (1 + n)
                 best_actions = score >= score.max() - self._child_select_epsilon
                 tie_breaking_prob = best_actions / best_actions.sum()
                 return jax.random.choice(rng_key, num_actions, p=tie_breaking_prob)
@@ -274,9 +275,10 @@ class Agent(object):
                 p = tree.child[p, a]
                 is_valid_child = jnp.clip(tree.visit_count[p], 0, 1)
                 q_mean = (
-                    q_mean + jnp.sum(tree.action_value[p] * is_valid_child)) / (jnp.sum(is_valid_child) + 1)
+                                 q_mean + jnp.sum(tree.action_value[p] * is_valid_child)) / (
+                                     jnp.sum(is_valid_child) + 1)
                 w_mean = (w_mean + jnp.sum(tree.action_std_value[p] * is_valid_child)) / (
-                    jnp.sum(is_valid_child) + 1)
+                        jnp.sum(is_valid_child) + 1)
                 rng_key, sub_key = jax.random.split(rng_key)
                 a = _select_action(sub_key, p, q_mean, w_mean)
                 return rng_key, p, a, q_mean, w_mean

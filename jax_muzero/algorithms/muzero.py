@@ -86,7 +86,8 @@ def generate_update_fn(agent: agents.Agent, opt_update, unroll_steps: int, td_st
 
         # tree search statistics
         visit_counts = jnp.clip(target_trees.visit_count, 0, 1)
-        average_std_of_actions = jnp.sum((target_trees.action_std_value - target_trees.action_value ** 2) * visit_counts) / jnp.sum(visit_counts)
+        average_std_of_actions = jnp.sum(
+            (target_trees.action_std_value - target_trees.action_value ** 2) * visit_counts) / jnp.sum(visit_counts)
         # 2.3 Value
         discounts = (1. - trajectory.last[1:]) * discount_factor
 
@@ -388,7 +389,6 @@ class Experiment(tune.Trainable):
     def cleanup(self):
         self._envs.close()
         self._evaluate_envs.close()
-
 
 
 class Experiment_Minigrid(WandbTrainableMixin, tune.Trainable):

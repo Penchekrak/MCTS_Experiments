@@ -1,6 +1,7 @@
 """MuZero: a MCTS agent that plans with a learned value-equivalent model."""
 import logging
 import time
+import uuid
 from pathlib import Path
 
 import chex
@@ -459,12 +460,13 @@ class Experiment_Minigrid(WandbTrainableMixin, tune.Trainable):
         #    env_kwargs=config['env_kwargs'],
         #    wrapper_kwargs={'episode_life': False},
         # )
+        self._video_folder = Path(config['video_folder']) / uuid.uuid4().hex[:4]
         self._evaluate_envs = make_vec_minigrid(
             env_id=env_id,
             num_env=config['evaluate_episodes'],
             seed=config['seed'],
             env_kwargs=config['env_kwargs'],
-            video_wrapper_kwargs=dict(video_folder=config['video_folder'], name_prefix='minigrid_video'),
+            video_wrapper_kwargs=dict(video_folder=str(self._video_folder), name_prefix='minigrid_video'),
             save_video=config['save_video']
         )
         self._evaluate_envs = vec_env.VecFrameStack(self._evaluate_envs, 4)
@@ -641,7 +643,7 @@ class Experiment_Minigrid(WandbTrainableMixin, tune.Trainable):
 
         replays = []
         if self._config['save_video']:
-            video_paths = [s for s in Path(self._config['video_folder']).iterdir() if s.suffix == '.mp4']
+            video_paths = [s for s in self._video_folder.iterdir() if s.suffix == '.mp4']
             for path in video_paths:
                 replays.append(wandb.Video(str(path)))
             log.update({'replays': replays})

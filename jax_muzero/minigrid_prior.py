@@ -10,7 +10,7 @@ import wandb
 
 if __name__ == '__main__':
     config = {
-        'env_id': 'MiniGrid-Dynamic-Obstacles-Random-6x6-v0',
+        'env_id': 'MiniGrid-FourRooms-v0',
         'env_kwargs': {},
         'seed': 42,
         'num_envs': 1,

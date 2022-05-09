@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
         'evaluate_episodes': 32,
         'log_interval': 100,
-        'total_frames': 100_000,
+        'total_frames': 1_000_000,
         
         'mcts_c3': 1.2,
         'mode': "prior",
@@ -64,7 +64,7 @@ if __name__ == '__main__':
         name=log_filename,
         config=config,
         stop={
-            'num_updates': 120_000,
+            'num_updates': 1_000_000,
         },
         resources_per_trial={
             'gpu': 1,

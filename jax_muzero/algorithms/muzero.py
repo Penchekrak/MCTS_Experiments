@@ -3,6 +3,7 @@ import logging
 import time
 import uuid
 from pathlib import Path
+from types import MethodType
 
 import chex
 import cv2
@@ -16,6 +17,8 @@ import numpy as np
 import optax
 import rlax
 import wandb
+from gym.wrappers import RecordVideo
+from gym_minigrid.minigrid import Grid
 from ray import tune
 from ray.tune.integration.wandb import WandbTrainableMixin
 
@@ -29,7 +32,6 @@ from environments import atari
 from vec_env import DummyVecEnv, Monitor, ShmemVecEnv
 
 cv2.ocl.setUseOpenCL(False)
-from gym.wrappers import RecordVideo
 
 
 def generate_update_fn(agent: agents.Agent, opt_update, unroll_steps: int, td_steps: int, discount_factor: float,
@@ -430,16 +432,21 @@ class Experiment_Minigrid(WandbTrainableMixin, tune.Trainable):
             else:
                 return DummyVecEnv([make_thunk(i + start_index) for i in range(num_env)])
 
+        def new_render(self, tile_size, agent_pos=None, agent_dir=None, highlight_mask=None):
+            return Grid.render(self, tile_size, agent_pos, agent_dir, highlight_mask=None)
+
         def make_minigrid_env(env_id, subrank=0, seed=None, env_kwargs=None, video_wrapper_kwargs=None,
                               save_video=False):
             del env_kwargs
             video_wrapper_kwargs = video_wrapper_kwargs or {}
             env = gym.make(env_id)
+            env = gym_minigrid.wrappers.FullyObsWrapper(env)
             env = gym_minigrid.wrappers.ImgObsWrapper(env)
             env.seed(seed + subrank if seed is not None else None)
             if save_video:
                 env = RecordVideo(env, **video_wrapper_kwargs)
             env = Monitor(env, allow_early_resets=True)
+            env.grid.render = MethodType(new_render, env.grid)
             return env
 
         # def wrap_deepmind(env, episode_life=False, clip_rewards=True):

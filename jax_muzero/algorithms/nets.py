@@ -194,3 +194,5 @@ class EZTransition(hk.Module):
             out = jax.nn.relu(out + shortcut)
         out = ResBlock(channels, stride=1, use_projection=False)(out)
         return out
+
+# class ExactStateEncoder

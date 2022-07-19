@@ -1,12 +1,11 @@
-https://storage.googleapis.com/jax-releases/cuda11/jaxlib-0.1.73+cuda11.cudnn82-cp39-none-manylinux2010_x86_64.whl
-dm-haiku==0.0.5
+https://storage.googleapis.com/jax-releases/cuda111/jaxlib-0.1.71+cuda111-cp38-none-manylinux2010_x86_64.whl
 distrax==0.1.0
 rlax==0.0.4
 optax==0.0.9
-chex==0.0.8
+chex==0.0.9
 dm-tree
 #atari-py==0.2.6
-gym[atari]
+gym[atari]==0.23.1
 ray[tune]==1.8.0
 opencv-python
 python-snappy

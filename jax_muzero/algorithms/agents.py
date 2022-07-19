@@ -5,7 +5,7 @@ import jax
 import jax.numpy as jnp
 import rlax
 
-from algorithms import haiku_nets as nets
+from algorithms import nets
 from algorithms import utils
 from algorithms.types import ActorOutput, AgentOutput, Params, Tree
 

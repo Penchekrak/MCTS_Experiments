@@ -4,7 +4,7 @@ import os
 from ray import tune
 
 
-from algorithms.muzero import Experiment, Experiment_Minigrid
+from algorithms.gumbel_muzero import Experiment, Experiment_Minigrid
 
 import wandb
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
         'mode': "base",
         'save_video': True,
         'video_folder': '/tmp/minigrid_video',
-        'wandb': {'project': 'MCTS-Experiments', 'entity': 'dtiapkin', 'name': 'Vanilla MuZero', 'sync_tensorboard': True}
+        'wandb': {'project': 'MCTS-Experiments', 'entity': 'dtiapkin', 'name': 'Gumbel MuZero', 'sync_tensorboard': True}
     }
     #wandb.init(project="MCTS-Experiments", entity="dtiapkin", name="Vanilla MuZero", sync_tensorboard=True)
     log_filename = os.path.basename(__file__).split('.')[0]

@@ -11,7 +11,7 @@ from algorithms.types import ActorOutput, Params
 class Actor(object):
     def __init__(self, envs, agent):
         self._envs = envs
-        self._agent_step = jax.jit(agent.batch_step)
+        self._agent_step = jax.jit(agent.batch_step, static_argnums=(4))
         num_envs = self._envs.num_envs
         self._timestep = ActorOutput(
             action_tm1=np.zeros((num_envs,), dtype=np.int32),
@@ -50,7 +50,7 @@ class Actor(object):
 class EvaluateActor(object):
     def __init__(self, envs, agent):
         self._envs = envs
-        self._agent_step = jax.jit(agent.batch_step)
+        self._agent_step = jax.jit(agent.batch_step, static_argnums=(4))
 
     def evaluate(self, rng_key: chex.PRNGKey, params):
         num_envs = self._envs.num_envs

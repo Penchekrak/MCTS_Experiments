@@ -10,7 +10,7 @@ import wandb
 
 if __name__ == '__main__':
     config = {
-        'env_id': 'MiniGrid-FourRooms-v0',
+        'env_id': 'MiniGrid-Empty-6x6-v0',
         'env_kwargs': {},
         'seed': 42,
         'num_envs': 1,
@@ -30,7 +30,7 @@ if __name__ == '__main__':
         'temperature_scheduling': 'staircase',
         'q_normalize_epsilon': 0.01,
         'child_select_epsilon': 1E-6,
-        'num_simulations': 50,
+        'num_simulations': 100,
 
         'replay_min_size': 2_000,
         'replay_max_size': 100_000,
@@ -47,24 +47,21 @@ if __name__ == '__main__':
 
         'evaluate_episodes': 32,
         'log_interval': 100,
-        'total_frames': 1_000_000,
+        'total_frames': 10_000,
         
         'mcts_c3': 1.2,
         'mode': "prior",
         'save_video': True,
         'video_folder': '/tmp/minigrid_video',
-        'wandb': {'project': 'MuZero', 'entity': 'skoltech_ml2022_project_synced_target_nets', 'sync_tensorboard': True}
+        'wandb': {'project': 'MCTS-Experiments', 'entity': 'dtiapkin', 'name': 'Bernstein MuZero', 'sync_tensorboard': True}
     }
-    # wandb.init(project="MuZero", entity="skoltech_ml2022_project_synced_target_nets",
-    #            sync_tensorboard=True, config=config)
-    # wandb.init(project="MuZero", entity="green-of-tim", sync_tensorboard=True)
     log_filename = os.path.basename(__file__).split('.')[0] + "_prior"
     analysis = tune.run(
         Experiment_Minigrid,
         name=log_filename,
         config=config,
         stop={
-            'num_updates': 1_000_000,
+            'num_updates': 12_000,
         },
         resources_per_trial={
             'gpu': 1,

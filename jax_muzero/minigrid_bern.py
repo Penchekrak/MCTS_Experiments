@@ -7,7 +7,7 @@ from algorithms.muzero import Experiment_Minigrid
 
 if __name__ == '__main__':
     config = {
-        'env_id': 'MiniGrid-FourRooms-v0',
+        'env_id': 'MiniGrid-Empty-6x6-v0',
         'env_kwargs': {},
         'seed': 42,
         'num_envs': 1,
@@ -44,13 +44,13 @@ if __name__ == '__main__':
 
         'evaluate_episodes': 32,
         'log_interval': 100,
-        'total_frames': 100_000,
+        'total_frames': 10_000,
 
         'mcts_c3': 1.2,
         'mode': "bern",
         'save_video': True,
         'video_folder': '/tmp/minigrid_video',
-        'wandb': {'project': 'MuZero', 'entity': 'skoltech_ml2022_project_synced_target_nets', 'sync_tensorboard': True}
+        'wandb': {'project': 'MCTS-Experiments', 'entity': 'dtiapkin', 'name': 'Bernstein MuZero', 'sync_tensorboard': True}
     }
     log_filename = os.path.basename(__file__).split('.')[0] + "_bern"
     analysis = tune.run(
@@ -58,7 +58,7 @@ if __name__ == '__main__':
         name=log_filename,
         config=config,
         stop={
-            'num_updates': 120_000,
+            'num_updates': 12_000,
         },
         resources_per_trial={
             'gpu': 1,

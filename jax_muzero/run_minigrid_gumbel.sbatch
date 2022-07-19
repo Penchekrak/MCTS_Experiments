@@ -14,4 +14,4 @@ export XLA_PYTHON_CLIENT_MEM_FRACTION=.7
 
 #python main.py --env BreakoutNoFrameskip-v4 --case atari --opr train --force --num_gpus 2 --num_cpus 32 --cpu_actor 8 --gpu_actor 8 --p_mcts_num 1 --seed 42 --use_priority --use_max_priority --amp_type 'torch_amp' --info 'EfficientZero-V1' --save_video
 #python3 main.py --env BreakoutNoFrameskip-v4 --case atari --opr train --force --num_gpus 2 --num_cpus 32 --cpu_actor 8 --gpu_actor 8 --p_mcts_num 1 --seed 42 --use_priority --use_max_priority --amp_type 'torch_amp' --info 'EfficientZero-V1' --save_video
-python minigrid_prior.py
+python minigrid_gumbel.py

@@ -24,7 +24,7 @@ from ray.tune.integration.wandb import WandbTrainableMixin
 
 import vec_env
 from algorithms import actors
-from algorithms import agents
+from algorithms import gumbel_agent
 from algorithms import replay_buffers as replay
 from algorithms import utils
 from algorithms.types import ActorOutput, Params
@@ -34,15 +34,13 @@ from vec_env import DummyVecEnv, Monitor, ShmemVecEnv
 cv2.ocl.setUseOpenCL(False)
 
 
-def generate_update_fn(agent: agents.Agent, opt_update, unroll_steps: int, td_steps: int, discount_factor: float,
+def generate_update_fn(agent: gumbel_agent.GumbelAgent, opt_update, unroll_steps: int, td_steps: int, discount_factor: float,
                        value_coef: float, policy_coef: float):
     def loss(params: Params, target_params: Params, trajectory: ActorOutput, rng_key: chex.PRNGKey):
         # 1. Make predictions. Unroll the model from the first state.
-        timestep = jax.tree_map(lambda t: t[:1], trajectory)
-        # Transform observation to embedding state
+        timestep = jax.tree_map(lambda t: t[:1], trajectory) # Sizes: [1 x S], fake batch
         learner_root = agent.root_unroll(params, timestep)  
-        # Extract only state, without dummy batch dimension
-        learner_root = jax.tree_map(lambda t: t[0], learner_root)
+        learner_root = jax.tree_map(lambda t: t[0], learner_root) # Size: [S], no batch!
 
         # Fill the actions after the absorbing state with random actions.
         unroll_trajectory = jax.tree_map(
@@ -51,7 +49,7 @@ def generate_update_fn(agent: agents.Agent, opt_update, unroll_steps: int, td_st
                                          unroll_trajectory.first[1:]) == 0.
         action_sequence = unroll_trajectory.action_tm1[1:]
         num_actions = learner_root.logits.shape[-1]
-        rng_key, select_key = jax.random.split(rng_key) 
+        rng_key, select_key = jax.random.split(rng_key)
         random_actions = jax.random.choice(
             select_key, num_actions, action_sequence.shape, replace=True)
         simulate_action_sequence = jax.lax.select(
@@ -71,16 +69,13 @@ def generate_update_fn(agent: agents.Agent, opt_update, unroll_steps: int, td_st
         reward_logits_target = utils.scalar_to_two_hot(reward_target, num_bins)
 
         # 2.2 Policy
-        target_roots = agent.root_unroll(target_params, trajectory)
-        search_roots = jax.tree_map(
+        target_roots = agent.root_unroll(target_params, trajectory) # Applied to whole trajectory
+        search_roots = jax.tree_map(                                # Only non-terminating states
             lambda t: t[:unroll_steps + 1], target_roots)
         rng_key, search_key = jax.random.split(rng_key)
-        search_keys = jax.random.split(search_key, search_roots.state.shape[0])
-        target_trees = jax.vmap(agent.mcts, (0, None, 0, None))(
-            search_keys, target_params, search_roots, False)
+        policy_outputs = agent.mcts_gumbel(search_key, target_params, search_roots, False)
         # The target distribution always uses a temperature of 1.
-        policy_target = jax.vmap(agent.act_prob, (0, None))(
-            target_trees.visit_count[:, 0], 1.)
+        policy_target = policy_outputs.action_weights
         # Set the policy targets for the absorbing state and the states after to uniform random.
         uniform_policy = jnp.ones_like(policy_target) / num_actions
         random_policy_mask = jnp.cumprod(1. - unroll_trajectory.last) == 0.
@@ -90,10 +85,13 @@ def generate_update_fn(agent: agents.Agent, opt_update, unroll_steps: int, td_st
             random_policy_mask, uniform_policy, policy_target)
         policy_target = jax.lax.stop_gradient(policy_target)
 
-        # tree search statistics
-        visit_counts = jnp.clip(target_trees.visit_count, 0, 1)
-        average_std_of_actions = jnp.sum(
-            (target_trees.action_std_value - target_trees.action_value ** 2) * visit_counts) / jnp.sum(visit_counts)
+        # tree search statistics 
+        # TODO: extract required statistics
+        # tree_stat = policy_outputs.search_tree.summary() 
+        # visit_counts = jnp.clip(target_trees.visit_count, 0, 1)
+        # average_std_of_actions = jnp.sum(
+        #     (target_trees.action_std_value - target_trees.action_value ** 2) * visit_counts) / jnp.sum(visit_counts)
+
         # 2.3 Value
         discounts = (1. - trajectory.last[1:]) * discount_factor
 
@@ -148,7 +146,7 @@ def generate_update_fn(agent: agents.Agent, opt_update, unroll_steps: int, td_st
             'value_loss': value_loss,
             'policy_loss': policy_loss,
             'total_loss': total_loss,
-            'average_std_in_tree': average_std_of_actions
+            #'average_std_in_tree': average_std_of_actions
         }
         return total_loss, log
 
@@ -172,7 +170,7 @@ def generate_update_fn(agent: agents.Agent, opt_update, unroll_steps: int, td_st
             'value_loss': jnp.mean(log['value_loss']),
             'policy_loss': jnp.mean(log['policy_loss']),
             'total_loss': jnp.mean(log['total_loss']),
-            'average_std_in_tree': jnp.mean(log['average_std_in_tree'])
+            #'average_std_in_tree': jnp.mean(log['average_std_in_tree'])
         })
         log.pop('reward_target')
         log.pop('reward_prediction')
@@ -220,7 +218,7 @@ class Experiment(tune.Trainable):
             wrapper_kwargs={'episode_life': False},
         )
         self._evaluate_envs = vec_env.VecFrameStack(self._evaluate_envs, 4)
-        self._agent = agents.Agent(
+        self._agent = gumbel_agent.GumbelAgent(
             self._envs.observation_space,
             self._envs.action_space,
             num_bins=config['num_bins'],
@@ -480,7 +478,7 @@ class Experiment_Minigrid(WandbTrainableMixin, tune.Trainable):
             save_video=config['save_video']
         )
         self._evaluate_envs = vec_env.VecFrameStack(self._evaluate_envs, 4)
-        self._agent = agents.Agent(
+        self._agent = gumbel_agent.GumbelAgent(
             self._envs.observation_space,
             self._envs.action_space,
             num_bins=config['num_bins'],
@@ -489,15 +487,7 @@ class Experiment_Minigrid(WandbTrainableMixin, tune.Trainable):
             output_init_scale=config['output_init_scale'],
             discount_factor=config['discount_factor'],
             num_simulations=config['num_simulations'],
-            max_search_depth=config['max_search_depth'],
-            mcts_c1=config['mcts_c1'],
-            mcts_c2=config['mcts_c2'],
-            alpha=config['alpha'],
-            exploration_prob=config['exploration_prob'],
-            q_normalize_epsilon=config['q_normalize_epsilon'],
-            child_select_epsilon=config['child_select_epsilon'],
-            mcts_c3=config['mcts_c3'],
-            mode=config['mode']
+            max_search_depth=config['max_search_depth']
         )
         self._actor = actors.Actor(self._envs, self._agent)
         self._evaluate_actor = actors.EvaluateActor(
@@ -682,13 +672,6 @@ if __name__ == '__main__':
         'use_resnet_v2': True,
         'output_init_scale': 0.,
         'discount_factor': 0.997 ** 4,
-        'mcts_c1': 1.25,
-        'mcts_c2': 19625,
-        'alpha': 0.3,
-        'exploration_prob': 0.25,
-        'temperature_scheduling': 'staircase',
-        'q_normalize_epsilon': 0.01,
-        'child_select_epsilon': 1E-6,
         'num_simulations': 50,
 
         'replay_min_size': 2_000,

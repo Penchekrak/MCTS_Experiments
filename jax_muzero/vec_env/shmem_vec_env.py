@@ -15,7 +15,7 @@ _NP_TO_CT = {np.float32: ctypes.c_float,
              np.int32: ctypes.c_int32,
              np.int8: ctypes.c_int8,
              np.uint8: ctypes.c_char,
-             np.bool: ctypes.c_bool}
+             np.bool_: ctypes.c_bool}
 
 
 def alloc_shmem(ctx, shape, dtype):
@@ -55,8 +55,8 @@ class ShmemVecEnv(VecEnv):
         self.act_buf = np.frombuffer(raw_act_buf, dtype=action_space.dtype.type).reshape((len(env_fns),))
         raw_rew_buf = alloc_shmem(ctx, (len(env_fns),), np.float32)
         self.rew_buf = np.frombuffer(raw_rew_buf, dtype=np.float32).reshape((len(env_fns),))
-        raw_done_buf = alloc_shmem(ctx, (len(env_fns),), np.bool)
-        self.done_buf = np.frombuffer(raw_done_buf, dtype=np.bool).reshape((len(env_fns),))
+        raw_done_buf = alloc_shmem(ctx, (len(env_fns),), np.bool_)
+        self.done_buf = np.frombuffer(raw_done_buf, dtype=np.bool_).reshape((len(env_fns),))
         self.parent_pipes = []
         self.procs = []
         for idx, env_fn in enumerate(env_fns):
@@ -68,7 +68,7 @@ class ShmemVecEnv(VecEnv):
                       raw_obs_buf, self.obs_keys, self.obs_shapes, self.obs_dtypes,
                       raw_act_buf, action_space.dtype.type,
                       raw_rew_buf, np.float32,
-                      raw_done_buf, np.bool))
+                      raw_done_buf, np.bool_))
             proc.daemon = True
             self.procs.append(proc)
             self.parent_pipes.append(parent_pipe)
